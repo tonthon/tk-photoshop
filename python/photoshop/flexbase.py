@@ -41,6 +41,9 @@ HEARTBEAT_TOLERANCE = 'SGTK_PHOTOSHOP_HEARTBEAT_TOLERANCE'
 PHOTOSHOP_TIMEOUT = 'SGTK_PHOTOSHOP_TIMEOUT'
 NETWORK_DEBUG = os.getenv('SGTK_PHOTOSHOP_NETWORK_DEBUG')
 
+# global RemoteObject for the photoshop application itself
+photoshop_instance = None
+
 
 def handle_show_log():
     app = QtCore.QCoreApplication.instance()
@@ -53,6 +56,7 @@ def handle_show_log():
 class FlexRequest(object):
     @classmethod
     def setup(cls, remote_port, heartbeat_port):
+
         cls.requests = {}
         cls.callbacks = {}
         cls.remote_port = remote_port
@@ -83,6 +87,10 @@ class FlexRequest(object):
 
         heartbeat = threading.Thread(target=cls.HeartbeatThreadRun, name="HeartbeatThread")
         heartbeat.start()
+
+        # initialize the photoshop app
+        global photoshop_instance
+        photoshop_instance = requestStatic('com.adobe.csawlib.photoshop.Photoshop', 'app')
 
     @classmethod
     def ActivatePython(cls):
@@ -196,6 +204,12 @@ class FlexRequest(object):
             elif type == 'app_event':
                 event = dom.find('event').text
                 cls.logger.debug("event: %s", event)
+            elif type == 'reinitialize':
+                # panel has been closed and reopened
+                # the flex uid cache is cleared when that happens, so update the app object
+                global photoshop_instance
+                new_app = requestStatic('com.adobe.csawlib.photoshop.Photoshop', 'app')
+                photoshop_instance._uid = new_app._uid
             else:
                 cls.logger.error('unknown python request type %s', type)
         else:
@@ -290,6 +304,10 @@ def setup(remote_port, heartbeat_port):
     FlexRequest.setup(remote_port, heartbeat_port)
 
 
+def initialize():
+    FlexRequest.initialize()
+
+
 def dictToPython(d):
     # Boolean, Date, Error, Function, Vector, XML, XMLList
     if d is None:
@@ -299,7 +317,9 @@ def dictToPython(d):
     if d['type'] in ['String', 'Number', 'Boolean', 'int', 'uint']:
         return d['value']
     if d['type'] == 'Array':
-        return [dictToPython[e] for e in d['value']]
+        return [dictToPython(e) for e in d['value']]
+    if d['type'] == 'class':
+        return RemoteClass(d['cls'])
     if d['type'] == 'RemoteObject':
         return RemoteObject(d['cls'], uid=d['obj_uid'])
     if d['type'] == 'error':
@@ -320,6 +340,8 @@ def pythonToDict(v):
         return {'type': 'Number', 'value': v}
     if isinstance(v, (list, tuple)):
         return {'type': 'Array', 'value': [pythonToDict(e) for e in v]}
+    if isinstance(v, RemoteClass):
+        return {'type': 'Class', 'cls': v._cls}
     if isinstance(v, RemoteObject):
         return {'type': 'RemoteObject', 'cls': v._cls, 'obj_uid': v._uid}
     raise ValueError("Unhandled python object (%s) '%s'" % (type(v), v))
@@ -370,6 +392,18 @@ def requestStatic(cls, prop):
     return dictToPython(results)
 
 
+def requestClass(cls):
+    logger = logging.getLogger('sgtk.photoshop.flexbase')
+    logger.debug("requestClass('%s')", cls)
+    request = {
+        'type': 'getclass',
+        'cls': cls,
+    }
+    results = FlexRequest(json.dumps(request))()
+    results = json.loads(results)
+    return dictToPython(results)
+
+
 def requestClassDesc(cls):
     logger = logging.getLogger('sgtk.photoshop.flexbase')
     logger.debug("requestClassDesc('%s')", cls)
@@ -383,6 +417,16 @@ def requestClassDesc(cls):
     except Exception:
         raise ValueError("Invalid class description: %s" % results)
     return dom
+
+
+class RemoteClass(object):
+    """A wrapper around a flex class"""
+    def __init__(self, cls):
+        self._logger = logging.getLogger('sgtk.photoshop.flexbase.RemoteClass')
+        self._cls = cls
+
+    def __repr__(self):
+        return "<%s>" % self._cls
 
 
 class RemoteObject(object):
@@ -400,7 +444,9 @@ class RemoteObject(object):
         if kwargs:
             raise ValueError('unknown arguments to __init__: %s' % kwargs)
         self._cls = cls
-        self._dom = self.classMap.setdefault(cls, requestClassDesc(cls))
+        self._dom = self.classMap.get(cls)
+        if self._dom is None:
+            self._dom = requestClassDesc(cls)
         if uid is not None and args:
             raise ValueError('cannot specify both uid and init args')
         if uid is not None:
@@ -450,10 +496,6 @@ class RemoteObject(object):
             dictToPython(results)
 
     def __getattr__(self, attr):
-        if attr.startswith('_'):
-            cls = self.__dict__.get('_cls', None)
-            raise AttributeError("%s has no attribute '%s'" % (cls, attr))
-
         # check if attr is an accessor
         accessor = None
         accessors = self._dom.findall('factory/accessor')
