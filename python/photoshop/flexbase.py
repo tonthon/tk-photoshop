@@ -74,10 +74,10 @@ class FlexRequest(object):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(('127.0.0.1', cls.remote_port))
         # send in multiple pack calls to avoid alignment issues
-        sent = s.send(struct.pack("i", SET_PORT))
+        sent = s.send(struct.pack("=i", SET_PORT))
         if sent == 0:
             cls.logger.error("setup: error sending listen port command")
-        sent = s.send(struct.pack("i", cls.local_port))
+        sent = s.send(struct.pack("=i", cls.local_port))
         if sent == 0:
             cls.logger.error("setup: error sending listen port")
         s.close()
@@ -100,7 +100,7 @@ class FlexRequest(object):
         """
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(('127.0.0.1', cls.remote_port))
-        sent = s.send(struct.pack("i", ACTIVATE_PYTHON))
+        sent = s.send(struct.pack("=i", ACTIVATE_PYTHON))
         if sent == 0:
             cls.logger.error("ActivatePython: send did not send data")
         if NETWORK_DEBUG is not None:
@@ -136,12 +136,12 @@ class FlexRequest(object):
             while True:
                 time.sleep(interval)
                 try:
-                    sent = s.send(struct.pack("i", PING))
+                    sent = s.send(struct.pack("=i", PING))
                     if sent == 0:
                         cls.logger.error("Heartbeat: send did not send data")
                         error_cycle += 1
                         continue
-                    response = struct.unpack("i", s.recv(struct.calcsize("i")))[0]
+                    response = struct.unpack("=i", s.recv(struct.calcsize("=i")))[0]
                     if response == PONG:
                         error_cycle = 0
                     else:
@@ -172,7 +172,7 @@ class FlexRequest(object):
 
     @classmethod
     def HandleConnection(cls, sock):
-        type = struct.unpack("i", sock.recv(struct.calcsize("i")))[0]
+        type = struct.unpack("=i", sock.recv(struct.calcsize("=i")))[0]
         if type == PYTHON_RESPONSE:
             xml = ''
             while True:
@@ -255,7 +255,7 @@ class FlexRequest(object):
                     return
                 totalsent += sent
 
-            response = struct.unpack("i", s.recv(struct.calcsize("i")))[0]
+            response = struct.unpack("=i", s.recv(struct.calcsize("=i")))[0]
             if (response != 0):
                 self.logger.error("SENT response non-zero: %d", response)
 

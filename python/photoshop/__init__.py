@@ -64,11 +64,11 @@ def StaticObject(cls, prop):
 def RemoteClass(cls):
     return flexbase.requestClass(cls)
 
+
 # plugin initialization will call the app setup
 def initialize_photoshop_application(remote_port, heartbeat_port):
     global app
     try:
-        logger.error("FB: %s" % str(flexbase))
         flexbase.setup(remote_port, heartbeat_port)
         app = flexbase.photoshop_instance
         logger.info("Photoshop version is '%s'", app.version)
