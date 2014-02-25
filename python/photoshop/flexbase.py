@@ -446,6 +446,17 @@ class RemoteClass(object):
     def __repr__(self):
         return "<%s>" % self._cls
 
+    def __getattr__(self, attr):
+        request = {
+            'type': 'getprop',
+            'obj': pythonToDict(self),
+            'prop': attr,
+        }
+        results = FlexRequest(json.dumps(request))()
+        results = json.loads(results)
+        self._logger.debug("__getattr__(%s) = %s", attr, results)
+        return dictToPython(results)
+
 
 class RemoteObject(object):
     """A wrapper around a flex object"""
