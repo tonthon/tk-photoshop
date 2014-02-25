@@ -141,11 +141,19 @@ class FlexRequest(object):
                         cls.logger.error("Heartbeat: send did not send data")
                         error_cycle += 1
                         continue
-                    response = struct.unpack("=i", s.recv(struct.calcsize("=i")))[0]
+
+                    bytes = struct.calcsize("=i")
+                    received = s.recv(bytes)
+                    if len(received) != bytes:
+                        cls.logger.error("Python: Heartbeat protocol error: too few bytes read: %d/%d" % (len(received), bytes))
+                        error_cycle += 1
+                        continue
+
+                    response = struct.unpack("=i", received)[0]
                     if response == PONG:
                         error_cycle = 0
                     else:
-                        cls.logger.exception("Python: Heartbeat unknown response: %s", response)
+                        cls.logger.error("Python: Heartbeat unknown response: %s", response)
                         error_cycle += 1
                 except socket.timeout:
                     cls.logger.info("Python: Heartbeat timeout")
@@ -154,7 +162,7 @@ class FlexRequest(object):
                     cls.logger.exception("Python: Heartbeat standard error: %s", errno.errorcode[e.errno])
                     error_cycle += 1
                 except Exception, e:
-                    cls.logger.exception("Python: Heartbeat unknown exception")
+                    cls.logger.exception("Python: Heartbeat unknown exception: %s" % e)
                 if error_cycle >= tolerance:
                     cls.logger.error("Python: Quitting.  Heartbeat errors greater than tolerance.")
                     os._exit(0)
@@ -172,7 +180,13 @@ class FlexRequest(object):
 
     @classmethod
     def HandleConnection(cls, sock):
-        type = struct.unpack("=i", sock.recv(struct.calcsize("=i")))[0]
+        bytes = struct.calcsize("=i")
+        received = sock.recv(bytes)
+        if len(received) != bytes:
+            cls.logger.error("protocol error: type could not be read")
+            return
+
+        type = struct.unpack("=i", received)[0]
         if type == PYTHON_RESPONSE:
             xml = ''
             while True:
@@ -255,7 +269,11 @@ class FlexRequest(object):
                     return
                 totalsent += sent
 
-            response = struct.unpack("=i", s.recv(struct.calcsize("=i")))[0]
+            bytes = struct.calcsize("=i")
+            recieved = s.recv(bytes)
+            if len(recieved) != bytes:
+                raise RuntimeError("protocol error reading flex response")
+            response = struct.unpack("=i", recieved)[0]
             if (response != 0):
                 self.logger.error("SENT response non-zero: %d", response)
 
