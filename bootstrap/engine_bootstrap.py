@@ -80,30 +80,18 @@ except Exception, e:
     logger.exception("Failed to initialize PySide.")
     sys.exit(1)
 
-g_resourceDir = os.path.join(os.path.dirname(__file__), "..", "resources")
-
 # create global app
 try:
     sys.argv[0] = 'Shotgun Photoshop'
-    QtGui.QApplication.setStyle("cleanlooks")
     g_app = QtGui.QApplication(sys.argv)
     g_app.setQuitOnLastWindowClosed(False)
-    g_app.setWindowIcon(QtGui.QIcon(os.path.join(g_resourceDir, "app.png")))
+    res_dir = os.path.join(os.path.dirname(__file__), "..", "resources")
+    g_app.setWindowIcon(QtGui.QIcon(os.path.join(res_dir, "process_icon_256.png")))
     g_app.setApplicationName(sys.argv[0])
 except Exception, e:
     photoshop.set_message("Could not create global PySide app:\n\n%s" % e)
     logger.exception("Could not create global PySide app")
     sys.exit(1)
-
-# update style
-try:
-    css_file = os.path.join(g_resourceDir, "dark.css")
-    f = open(css_file)
-    css = f.read()
-    f.close()
-    g_app.setStyleSheet(css)
-except Exception:
-    logger.exception("Could not set QT style sheet")
 
 # logging console
 try:

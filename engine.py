@@ -30,12 +30,11 @@ class PhotoshopEngine(tank.platform.Engine):
     def init_engine(self):
         self._init_logging()
         self.log_debug("%s: Initializing...", self)
-
         self.__qt_dialogs = []
-        
 
     def post_app_init(self):
         import tk_photoshop
+        self._initialize_dark_look_and_feel()
         self._panel_generator = tk_photoshop.PanelGenerator(self)
         self._panel_generator.populate_panel()
 
