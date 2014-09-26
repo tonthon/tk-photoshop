@@ -93,7 +93,7 @@ def _shouldMaximizeCompatibility():
     # simply create a new file with two layers, set the compatibility level to Always and do a
     # Shotgun->Save As. Then, set the setting to Never and do a Shotgun->Save As as another name.
     # Finally, switch it to Ask and do a Shotgun->Save As again. Then, load these images as textures
-    # in Maya. Only the Ask and Always images will show up properly in. The Never one won't work.
+    # in Maya. Only the Ask and Always images will show up properly. The Never one won't work.
     # Note that you have to have at least a second layer on top of the background one. Maya is able
     # to read files that either have the compatibility flag set or that have a single background
     # layer.
@@ -108,9 +108,11 @@ def _shouldMaximizeCompatibility():
 
     # value is an object, and we can't compare objects, so compare their string representation
     # instead.
-    return app.preferences.maximizeCompatibility.value.toString() != flexbase.requestStatic(
+    user_setting = app.preferences.maximizeCompatibility.value.toString()
+    never_setting = flexbase.requestStatic(
         "com.adobe.photoshop::QueryStateType", "NEVER"
     ).value.toString()
+    return user_setting != never_setting
 
 
 def save_as(document, file_path):
