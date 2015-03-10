@@ -113,6 +113,11 @@ def _save_config(config):
 
 
 def _get_conf_fname():
+    if "TK_PHOTOSHOP_EXTENSION_TRACKER" in os.environ:
+        # Allow overriding of the file location so that if a studio is managing
+        # the extension machine wide they can avoid having the first invocation
+        # of the engine for an artist trigger an extension install.
+        return os.environ["TK_PHOTOSHOP_EXTENSION_TRACKER"]
     if sys.platform == "win32":
         return _get_win_fname()
     elif sys.platform == "darwin":
