@@ -8,7 +8,7 @@ def setup(launcher, context):
 
     # Get the path to the python executable
     python_setting = {"darwin": "mac_python_path", "win32": "windows_python_path"}[sys.platform]
-    python_path = extra_configs.get(python_setting)
+    python_path = extra_configs.get(python_setting) or sys.executable
     if not python_path:
         raise tank.TankError("Your photoshop app launch config is missing the extra setting %s" % python_setting)
 
