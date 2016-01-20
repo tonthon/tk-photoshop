@@ -21,7 +21,7 @@ configuration:
 requires_shotgun_fields:
 
 # More verbose description of this item 
-display_name: "Photoshop Engine"
+display_name: "Shotgun Engine for Photoshop"
 description: "Shotgun Integration in Photoshop"
 
 # Required minimum versions for this item to run
