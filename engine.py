@@ -39,7 +39,11 @@ class PhotoshopEngine(tank.platform.Engine):
         self._panel_generator = tk_photoshop.PanelGenerator(self)
         self._panel_generator.populate_panel()
 
-        self.log_user_attribute_metric("Photoshop version", str(app.version))
+        try:
+            self.log_user_attribute_metric("Photoshop version", str(app.version))
+        except:
+            # ignore all errors. ex: using a core that doesn't support metrics
+            pass
 
     def destroy_engine(self):
         self.log_debug("%s: Destroying...", self)
