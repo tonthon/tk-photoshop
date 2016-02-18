@@ -18,6 +18,7 @@ import logging
 import tank
 
 from photoshop.flexbase import FlexRequest
+from photoshop import app
 
 
 ###############################################################################################
@@ -37,6 +38,12 @@ class PhotoshopEngine(tank.platform.Engine):
         self._initialize_dark_look_and_feel()
         self._panel_generator = tk_photoshop.PanelGenerator(self)
         self._panel_generator.populate_panel()
+
+        try:
+            self.log_user_attribute_metric("Photoshop version", str(app.version))
+        except:
+            # ignore all errors. ex: using a core that doesn't support metrics
+            pass
 
     def destroy_engine(self):
         self.log_debug("%s: Destroying...", self)
